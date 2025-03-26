@@ -1,20 +1,40 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
-$dotenv->load();
+
+try {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+    $dotenv->load();
+    $dotenv->required(['DB_host', 'DB_name', 'DB_user', 'DB_pass'])->notEmpty();
+} catch (\Dotenv\Exception\InvalidPathException $e) {
+    die("Environment file not found in root directory. Please create .env file.");
+} catch (\Dotenv\Exception\ValidationException $e) {
+    die("Missing required environment variables: " . $e->getMessage());
+}
 
 class Database
 {
     private $pdo;
     public function __construct()
     {
+        if (
+            !isset($_ENV['DB_host']) || !isset($_ENV['DB_name']) ||
+            !isset($_ENV['DB_user']) || !isset($_ENV['DB_pass'])
+        ) {
+            throw new RuntimeException("Database configuration incomplete");
+        }
+
         $dbhost = $_ENV['DB_host'];
         $dbname = $_ENV['DB_name'];
         $dbuser = $_ENV['DB_user'];
         $dbpass = $_ENV['DB_pass'];
+
         try {
-            $this->pdo = new PDO("mysql:host=$dbhost;dbname=$dbname;charset=utf8", $dbuser, $dbpass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->pdo = new PDO(
+                "mysql:host=$dbhost;dbname=$dbname;charset=utf8",
+                $dbuser,
+                $dbpass,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
         } catch (PDOException $e) {
             die("Database connection failed: " . $e->getMessage());
         }
