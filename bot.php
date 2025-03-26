@@ -70,13 +70,13 @@ if ($text === "/start") {
     if ($db->userExists($chatId)) {
         $telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Welcome back, * " . escapeMarkdownV2($username) . " *! 🎉",
+            'text' => "Welcome back, * " . escapeMarkdownV2($username) . " * 🎉",
             'parse_mode' => 'MarkdownV2'
         ]);
         error_log("User already exists: " . $chatId);
     } else {
         $db->insertUser($chatId);
-        $welcomeMessage = "*Welcome " . escapeMarkdownV2($username) . "*\\! 🎉\n" .
+        $welcomeMessage = "*Welcome " . escapeMarkdownV2($username) . "*\\ 🎉\n" .
             "Use `/plans` to see VPN packages\\.";
         $telegram->sendMessage([
             'chat_id' => $chatId,
