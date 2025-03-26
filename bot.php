@@ -60,10 +60,6 @@ if (isset($update['callback_query'])) {
 
 }
 
-// Load user progress from a JSON file (mock database)
-$dataFile = __DIR__ . '/user_data.json';
-$userData = file_exists($dataFile) ? json_decode(file_get_contents($dataFile), true) : [];
-
 if (!isset($userData[$chatId])) {
     $userData[$chatId] = ['step' => 0];
 }
@@ -72,9 +68,10 @@ if (!isset($userData[$chatId])) {
 if ($text === "/start") {
     error_log("New chat started: " . $chatId);
     if ($db->userExists($chatId)) {
+        $welcomeMessage = $langManager->get('welcome_back', ['username' => $username]);
         $telegram->sendMessage([
             'chat_id' => $chatId,
-            'text' => "Welcome back, * " . escapeMarkdownV2($username) . " * 🎉",
+            'text' => $welcomeMessage,
             'parse_mode' => 'MarkdownV2'
         ]);
         error_log("User already exists: " . $chatId);
