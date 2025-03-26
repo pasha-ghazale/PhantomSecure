@@ -24,34 +24,22 @@ if (!$update || !isset($update['message'])) {
 }
 
 if (isset($update['callback_query'])) {
-    // Callback query fields
-    $callbackQueryId = $update["callback_query"]["id"] ?? '';
-    $callbackData = $update['callback_query']['data'] ?? '';
-    $message_id = $update['callback_query']['message']['message_id'] ?? '';
-    $chatId = $update['callback_query']['from']['id'] ?? '';
-    $chat_type = $update['callback_query']['message']['chat']['type'];
-    $callbackFrom = $update['callback_query']['from'] ?? [];
-    $username = $callbackFrom['username'] ?? '';
-    $firstname = $callbackFrom['first_name'] ?? '';
-    $lastname = $callbackFrom['last_name'] ?? '';
-    $language_code = $callbackFrom['language_code'] ?? '';
-
+    $callbackQueryId = $update["callback_query"]["id"];
+    $callbackData = $update['callback_query']['data'];
+    $message_id = $update['callback_query']['message']['message_id'];
+    $chatId = $update['callback_query']['from']['id'];
 
     if (strpos($callbackData, 'lang_') === 0) {
         $newLang = substr($callbackData, 5);
         $db->setUserLanguage($chatId, $newLang);
-
-        // Create new language manager instance
         $langManager = new LanguageManager($newLang);
 
         try {
-            // Answer callback query first
             $telegram->answerCallbackQuery([
                 'callback_query_id' => $callbackQueryId,
                 'text' => '✅ Language updated | زبان بروز شد'
             ]);
 
-            // Update original message
             $telegram->editMessageText([
                 'chat_id' => $chatId,
                 'message_id' => $message_id,
@@ -67,14 +55,11 @@ if (isset($update['callback_query'])) {
                 ])
             ]);
 
-            // Send confirmation
-            $confirmMessage = $langManager->get('language_updated');
             $telegram->sendMessage([
                 'chat_id' => $chatId,
-                'text' => escapeMarkdownV2($confirmMessage),
+                'text' => escapeMarkdownV2($langManager->get('language_updated')),
                 'parse_mode' => 'MarkdownV2'
             ]);
-
         } catch (Exception $e) {
             error_log("Telegram API Error: " . $e->getMessage());
         }
