@@ -17,41 +17,70 @@ var_dump($response);
 
 $db = new Database();
 
-
-
 // Read incoming webhook JSON payload
 $update = json_decode(file_get_contents('php://input'), true);
 error_log("Incoming update: " . json_encode($update));
-if (!$update || !isset($update['message'])) {
+if (!$update || (!isset($update['message']) && !isset($update['callback_query']))) {
     http_response_code(200);
     exit;
 }
 
+// Define $chatId based on the type of update
+$chatId = null;
+if (isset($update['message'])) {
+    $chatId = $update['message']['from']['id'] ?? null;
+} elseif (isset($update['callback_query'])) {
+    $chatId = $update['callback_query']['from']['id'] ?? null;
+}
+
+if (!$chatId) {
+    error_log("Error: Could not determine chat ID from update");
+    http_response_code(200);
+    exit;
+}
+
+// Language manager instance
+error_log("Initializing LanguageManager for chat ID $chatId");
+$langManager = new LanguageManager($db->getUserLanguage($chatId));
+error_log("LanguageManager initialized for chat ID $chatId");
+
 if (isset($update['callback_query'])) {
     error_log("Received callback_query: " . json_encode($update['callback_query']));
     $callbackQueryId = $update["callback_query"]["id"] ?? '';
+    error_log("Callback query ID: $callbackQueryId");
     $callbackData = $update['callback_query']['data'] ?? '';
+    error_log("Callback data: $callbackData");
     $message_id = $update['callback_query']['message']['message_id'] ?? '';
+    error_log("Message ID: $message_id");
     $chatId = $update['callback_query']['from']['id'] ?? '';
-    $chat_type = $update['callback_query']['message']['chat']['type'];
+    error_log("Chat ID: $chatId");
+    $chat_type = $update['callback_query']['message']['chat']['type'] ?? '';
+    error_log("Chat type: $chat_type");
     $callbackFrom = $update['callback_query']['from'] ?? [];
+    error_log("Callback from: " . json_encode($callbackFrom));
     $username = $callbackFrom['username'] ?? '';
+    error_log("Username: $username");
     $firstname = $callbackFrom['first_name'] ?? '';
+    error_log("First name: $firstname");
     $lastname = $callbackFrom['last_name'] ?? '';
+    error_log("Last name: $lastname");
     $language_code = $callbackFrom['language_code'] ?? '';
+    error_log("Language code: $language_code");
 
     if (strpos($callbackData, 'lang_') === 0) {
+        error_log("Callback data starts with 'lang_'");
         $newLang = substr($callbackData, 5);
+        error_log("New language: $newLang");
         try {
             // Update the user's language in the database
             error_log("Updating language for user $chatId to $newLang");
             $db->setUserLanguage($chatId, $newLang);
             error_log("Language updated in DB for user $chatId");
 
-            // Create a new language manager instance
-            error_log("Creating LanguageManager for language $newLang");
+            // Update the language manager with the new language
+            error_log("Updating LanguageManager to language $newLang");
             $langManager = new LanguageManager($newLang);
-            error_log("LanguageManager created for language $newLang");
+            error_log("LanguageManager updated to language $newLang");
 
             // Answer the callback query
             $telegram->answerCallbackQuery([
@@ -88,11 +117,12 @@ if (isset($update['callback_query'])) {
         } catch (Exception $e) {
             error_log("Error in callback query handling: " . $e->getMessage());
         }
+    } else {
+        error_log("Callback data does not start with 'lang_'");
     }
 } else {
     // Message fields
     $text = $update['message']['text'] ?? '';
-    $chatId = $update['message']['from']['id'] ?? '';
     $chat_type = $update['message']['chat']['type'] ?? '';
     $firstname = $update['message']['from']['first_name'] ?? '';
     $lastname = $update['message']['from']['last_name'] ?? '';
@@ -109,13 +139,7 @@ if (isset($update['callback_query'])) {
     $video = $update['message']['video'] ?? [];
     $voice = $update['message']['voice'] ?? [];
     $contact = $update['message']['contact'] ?? [];
-
 }
-
-
-// Language manager instance
-$langManager = new LanguageManager($db->getUserLanguage($chatId));
-
 
 if ($text === "/start") {
     if ($db->userExists($chatId)) {
@@ -136,8 +160,8 @@ if ($text === "/start") {
         ]);
         error_log("New user added: " . $chatId);
     }
-
 }
+
 if ($text === "/language" || $text === "/lang") {
     $keyboard = new Keyboard([
         'inline_keyboard' => [
@@ -154,41 +178,7 @@ if ($text === "/language" || $text === "/lang") {
         'reply_markup' => $keyboard
     ]);
 }
-if (isset($callbackData) && strpos($callbackData, 'lang_') === 0) {
-    $newLang = substr($callbackData, 5);
-    $db->setUserLanguage($chatId, $newLang);
 
-    // Create new language manager instance with updated language
-    $langManager = new LanguageManager($newLang);
-
-    // Answer the callback query
-    $telegram->answerCallbackQuery([
-        'callback_query_id' => $callbackQueryId,
-        'text' => '✅ Language updated | زبان بروز شد'
-    ]);
-
-    // Update the original message with new language
-    $telegram->editMessageText([
-        'chat_id' => $chatId,
-        'message_id' => $message_id,
-        'text' => $langManager->get('change_language'),
-        'reply_markup' => new Keyboard([
-            'inline_keyboard' => [
-                [
-                    ['text' => '🇬🇧 English', 'callback_data' => 'lang_en'],
-                    ['text' => '🇮🇷 فارسی', 'callback_data' => 'lang_fa']
-                ]
-            ]
-        ])
-    ]);
-
-    // Send confirmation message in new language
-    $telegram->sendMessage([
-        'chat_id' => $chatId,
-        'text' => $langManager->get('language_updated'),
-        'parse_mode' => 'MarkdownV2'
-    ]);
-}
 function escapeMarkdownV2($text)
 {
     $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
