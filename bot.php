@@ -36,6 +36,49 @@ if (isset($update['callback_query'])) {
     $lastname = $callbackFrom['last_name'] ?? '';
     $language_code = $callbackFrom['language_code'] ?? '';
 
+
+    if (strpos($callbackData, 'lang_') === 0) {
+        $newLang = substr($callbackData, 5);
+        $db->setUserLanguage($chatId, $newLang);
+
+        // Create new language manager instance
+        $langManager = new LanguageManager($newLang);
+
+        try {
+            // Answer callback query first
+            $telegram->answerCallbackQuery([
+                'callback_query_id' => $callbackQueryId,
+                'text' => '✅ Language updated | زبان بروز شد'
+            ]);
+
+            // Update original message
+            $telegram->editMessageText([
+                'chat_id' => $chatId,
+                'message_id' => $message_id,
+                'text' => $langManager->get('change_language'),
+                'parse_mode' => 'MarkdownV2',
+                'reply_markup' => new Keyboard([
+                    'inline_keyboard' => [
+                        [
+                            ['text' => '🇬🇧 English', 'callback_data' => 'lang_en'],
+                            ['text' => '🇮🇷 فارسی', 'callback_data' => 'lang_fa']
+                        ]
+                    ]
+                ])
+            ]);
+
+            // Send confirmation
+            $confirmMessage = $langManager->get('language_updated');
+            $telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => escapeMarkdownV2($confirmMessage),
+                'parse_mode' => 'MarkdownV2'
+            ]);
+
+        } catch (Exception $e) {
+            error_log("Telegram API Error: " . $e->getMessage());
+        }
+    }
 } else {
     // Message fields
     $text = $update['message']['text'] ?? '';
@@ -58,6 +101,8 @@ if (isset($update['callback_query'])) {
     $contact = $update['message']['contact'] ?? [];
 
 }
+
+
 // Language manager instance
 $langManager = new LanguageManager($db->getUserLanguage($chatId));
 
