@@ -93,22 +93,45 @@ if ($text === "/language" || $text === "/lang") {
         ]
     ]);
 
-    $langManager = new LanguageManager($db->getUserLanguage($chatId));
     $telegram->sendMessage([
         'chat_id' => $chatId,
         'text' => $langManager->get('change_language'),
         'reply_markup' => $keyboard
     ]);
 }
-// Handle language selection callback
 if (isset($callbackData) && strpos($callbackData, 'lang_') === 0) {
     $newLang = substr($callbackData, 5);
     $db->setUserLanguage($chatId, $newLang);
-    // Send confirmation message in new language
+
+    // Create new language manager instance with updated language
     $langManager = new LanguageManager($newLang);
+
+    // Answer the callback query
     $telegram->answerCallbackQuery([
         'callback_query_id' => $callbackQueryId,
         'text' => '✅ Language updated | زبان بروز شد'
+    ]);
+
+    // Update the original message with new language
+    $telegram->editMessageText([
+        'chat_id' => $chatId,
+        'message_id' => $message_id,
+        'text' => $langManager->get('change_language'),
+        'reply_markup' => new Keyboard([
+            'inline_keyboard' => [
+                [
+                    ['text' => '🇬🇧 English', 'callback_data' => 'lang_en'],
+                    ['text' => '🇮🇷 فارسی', 'callback_data' => 'lang_fa']
+                ]
+            ]
+        ])
+    ]);
+
+    // Send confirmation message in new language
+    $telegram->sendMessage([
+        'chat_id' => $chatId,
+        'text' => $langManager->get('language_updated'),
+        'parse_mode' => 'MarkdownV2'
     ]);
 }
 function escapeMarkdownV2($text)
