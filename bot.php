@@ -66,13 +66,14 @@ if (!isset($userData[$chatId])) {
 
 
 if ($text === "/start") {
-
+    error_log("New chat started: " . $chatId);
     if ($db->userExists($chatId)) {
         $telegram->sendMessage([
             'chat_id' => $chatId,
             'text' => "Welcome back, * " . escapeMarkdownV2($username) . " *! 🎉",
             'parse_mode' => 'MarkdownV2'
         ]);
+        error_log("User already exists: " . $chatId);
     } else {
         $db->insertUser($chatId);
         $welcomeMessage = "*Welcome " . escapeMarkdownV2($username) . "*\\! 🎉\n" .
@@ -82,6 +83,7 @@ if ($text === "/start") {
             'text' => $welcomeMessage,
             'parse_mode' => 'MarkdownV2'
         ]);
+        error_log("New user added: " . $chatId);
     }
 
 }
