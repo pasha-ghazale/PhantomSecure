@@ -14,7 +14,6 @@ $telegram = new Api($botToken);
 
 $db = new Database();
 
-$langManager = new LanguageManager($db->getUserLanguage($chatId));
 
 
 // Read incoming webhook JSON payload
@@ -59,14 +58,11 @@ if (isset($update['callback_query'])) {
     $contact = $update['message']['contact'] ?? [];
 
 }
-
-if (!isset($userData[$chatId])) {
-    $userData[$chatId] = ['step' => 0];
-}
+// Language manager instance
+$langManager = new LanguageManager($db->getUserLanguage($chatId));
 
 
 if ($text === "/start") {
-    error_log("New chat started: " . $chatId);
     if ($db->userExists($chatId)) {
         $welcomeMessage = $langManager->get('welcome_back', ['username' => $username]);
         $telegram->sendMessage([
@@ -74,7 +70,6 @@ if ($text === "/start") {
             'text' => $welcomeMessage,
             'parse_mode' => 'MarkdownV2'
         ]);
-        error_log("User already exists: " . $chatId);
     } else {
         $db->insertUser($chatId);
         $welcomeMessage = "*Welcome " . escapeMarkdownV2($username) . "*\\ 🎉\n" .
