@@ -11,7 +11,8 @@ $botToken = $_ENV['TELEGRAM_BOT_TOKEN'];
 $telegram = new Api($botToken);
 
 
-$db = require_once __DIR__ . '/config/database.php';
+$db = new Database();
+
 // Read incoming webhook JSON payload
 $update = json_decode(file_get_contents('php://input'), true);
 if (!$update || !isset($update['message'])) {
