@@ -58,5 +58,17 @@ class Database
         $stmt->execute(['chat_id' => $chatId]);
 
     }
+    public function getUserLanguage($chatId)
+    {
+        $stmt = $this->pdo->prepare("SELECT preferred_lang FROM users WHERE chat_id = :chat_id");
+        $stmt->execute(['chat_id' => $chatId]);
+        return $stmt->fetchColumn() ?: 'en';
+    }
+
+    public function setUserLanguage($chatId, $lang)
+    {
+        $stmt = $this->pdo->prepare("UPDATE users SET preferred_lang = :lang WHERE chat_id = :chat_id");
+        $stmt->execute(['chat_id' => $chatId, 'lang' => $lang]);
+    }
 }
 ?>

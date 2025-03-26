@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/language.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
@@ -12,6 +13,9 @@ $telegram = new Api($botToken);
 
 
 $db = new Database();
+
+$langManager = new LanguageManager($db->getUserLanguage($chatId));
+
 
 // Read incoming webhook JSON payload
 $update = json_decode(file_get_contents('php://input'), true);
@@ -87,7 +91,34 @@ if ($text === "/start") {
     }
 
 }
+if ($text === "/language" || $text === "/lang") {
+    $keyboard = new Keyboard([
+        'inline_keyboard' => [
+            [
+                ['text' => '🇬🇧 English', 'callback_data' => 'lang_en'],
+                ['text' => '🇮🇷 فارسی', 'callback_data' => 'lang_fa']
+            ]
+        ]
+    ]);
 
+    $langManager = new LanguageManager($db->getUserLanguage($chatId));
+    $telegram->sendMessage([
+        'chat_id' => $chatId,
+        'text' => $langManager->get('change_language'),
+        'reply_markup' => $keyboard
+    ]);
+}
+// Handle language selection callback
+if (isset($callbackData) && strpos($callbackData, 'lang_') === 0) {
+    $newLang = substr($callbackData, 5);
+    $db->setUserLanguage($chatId, $newLang);
+    // Send confirmation message in new language
+    $langManager = new LanguageManager($newLang);
+    $telegram->answerCallbackQuery([
+        'callback_query_id' => $callbackQueryId,
+        'text' => '✅ Language updated | زبان بروز شد'
+    ]);
+}
 function escapeMarkdownV2($text)
 {
     $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
