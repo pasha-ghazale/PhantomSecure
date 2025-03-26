@@ -11,6 +11,9 @@ use Telegram\Bot\Keyboard\Keyboard;
 $botToken = $_ENV['TELEGRAM_BOT_TOKEN'];
 $telegram = new Api($botToken);
 
+// Get webhook info
+$response = $telegram->getWebhookInfo();
+var_dump($response);
 
 $db = new Database();
 
@@ -18,16 +21,24 @@ $db = new Database();
 
 // Read incoming webhook JSON payload
 $update = json_decode(file_get_contents('php://input'), true);
+error_log("Incoming update: " . json_encode($update));
 if (!$update || !isset($update['message'])) {
     http_response_code(200);
     exit;
 }
 
 if (isset($update['callback_query'])) {
-    $callbackQueryId = $update["callback_query"]["id"];
-    $callbackData = $update['callback_query']['data'];
-    $message_id = $update['callback_query']['message']['message_id'];
-    $chatId = $update['callback_query']['from']['id'];
+    error_log("Received callback_query: " . json_encode($update['callback_query']));
+    $callbackQueryId = $update["callback_query"]["id"] ?? '';
+    $callbackData = $update['callback_query']['data'] ?? '';
+    $message_id = $update['callback_query']['message']['message_id'] ?? '';
+    $chatId = $update['callback_query']['from']['id'] ?? '';
+    $chat_type = $update['callback_query']['message']['chat']['type'];
+    $callbackFrom = $update['callback_query']['from'] ?? [];
+    $username = $callbackFrom['username'] ?? '';
+    $firstname = $callbackFrom['first_name'] ?? '';
+    $lastname = $callbackFrom['last_name'] ?? '';
+    $language_code = $callbackFrom['language_code'] ?? '';
 
     if (strpos($callbackData, 'lang_') === 0) {
         $newLang = substr($callbackData, 5);
@@ -43,7 +54,7 @@ if (isset($update['callback_query'])) {
             $telegram->editMessageText([
                 'chat_id' => $chatId,
                 'message_id' => $message_id,
-                'text' => $langManager->get('change_language'),
+                'text' => escapeMarkdownV2($langManager->get('change_language')),
                 'parse_mode' => 'MarkdownV2',
                 'reply_markup' => new Keyboard([
                     'inline_keyboard' => [
