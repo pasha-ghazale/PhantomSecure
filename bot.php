@@ -2,6 +2,7 @@
 require __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/config/language.php';
+require_once __DIR__ . '/config/Utils.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
@@ -94,7 +95,7 @@ if (isset($update['callback_query'])) {
             $telegram->editMessageText([
                 'chat_id' => $chatId,
                 'message_id' => $message_id,
-                'text' => escapeMarkdownV2($changeLanguageText),
+                'text' => Utils::escapeMarkdownV2($changeLanguageText),
                 'parse_mode' => 'MarkdownV2',
                 'reply_markup' => new Keyboard([
                     'inline_keyboard' => [
@@ -111,7 +112,7 @@ if (isset($update['callback_query'])) {
             error_log("Language updated text: $languageUpdatedText");
             $telegram->sendMessage([
                 'chat_id' => $chatId,
-                'text' => escapeMarkdownV2($languageUpdatedText),
+                'text' => Utils::escapeMarkdownV2($languageUpdatedText),
                 'parse_mode' => 'MarkdownV2'
             ]);
         } catch (Exception $e) {
@@ -151,7 +152,7 @@ if ($text === "/start") {
         ]);
     } else {
         $db->insertUser($chatId);
-        $welcomeMessage = "*Welcome " . escapeMarkdownV2($username) . "*\\ 🎉\n" .
+        $welcomeMessage = "*Welcome " . Utils::escapeMarkdownV2($username) . "*\\ 🎉\n" .
             "Use `/plans` to see VPN packages\\.";
         $telegram->sendMessage([
             'chat_id' => $chatId,
@@ -179,12 +180,4 @@ if ($text === "/language" || $text === "/lang") {
     ]);
 }
 
-function escapeMarkdownV2($text)
-{
-    $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
-    foreach ($specialChars as $char) {
-        $text = str_replace($char, "\\" . $char, $text);
-    }
-    return $text;
-}
 ?>

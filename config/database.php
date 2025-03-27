@@ -70,5 +70,11 @@ class Database
         $stmt = $this->pdo->prepare("UPDATE users SET preferred_lang = :lang WHERE chat_id = :chat_id");
         $stmt->execute(['chat_id' => $chatId, 'lang' => $lang]);
     }
+    public function isAdmin($chatId)
+    {
+        $stmt = $this->pdo->prepare("SELECT is_admin FROM users WHERE chat_id = :chat_id");
+        $stmt->execute(['chat_id' => $chatId]);
+        return $stmt->fetchColumn() == 1;
+    }
 }
 ?>
